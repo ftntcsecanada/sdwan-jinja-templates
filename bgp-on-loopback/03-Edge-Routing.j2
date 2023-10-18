@@ -1,5 +1,5 @@
 {# 03-Edge-Routing.j2                                                         #}
-{# Release: 7.2                                                               #}
+{# Release: 7.4                                                               #}
 {# Design flavor: "BGP on Loopback"                                           #}
 {# -------------------------------------------------------------------------- #}
 {# Disclaimer: Normally, this file is not supposed to be edited by users.     #}
@@ -9,10 +9,11 @@
 
 config router route-map
   {% for i in range(1,3) %}
-  edit "H{{loop.index}}_TAG"
+  {% set l1 = loop %}
+  edit "H{{l1.index}}_TAG"
     config rule
       edit 1
-        set set-tag {{ loop.index }}
+        set set-tag {{ l1.index }}
       next
     end
   next
@@ -36,6 +37,7 @@ config router bgp
   set tag-resolve-mode merge
   config neighbor
     {% for h in project.regions[region].hubs %}
+    {% set l2 = loop %}
     edit {{ project.hubs[h].lo_bgp }}
       set soft-reconfiguration enable
       set advertisement-interval 1
@@ -43,14 +45,33 @@ config router bgp
       set update-source "Lo"
       set connect-timer 1
       set remote-as {{ project.regions[region].as }}
-      set route-map-in "H{{loop.index}}_TAG"
+      set route-map-in "H{{l2.index}}_TAG"
       set route-map-out-preferable "SLA_OK" 
     next
     {% endfor %}
   end
+  config neighbor-group
+    edit "EDGE"
+      set soft-reconfiguration enable
+      set advertisement-interval 1
+      set next-hop-self enable
+      set passive disable
+      set remote-as {{ project.regions[region].as }}
+      set interface "Lo"
+      set update-source "Lo"
+      set route-map-out-preferable "SLA_OK"
+    next
+  end
+  config neighbor-range
+    edit 1
+      set prefix {{ project.lo_summary }}
+      set neighbor-group "EDGE"
+      next
+    end
   config network
     {% for i in project.profiles[profile].interfaces if i.role == 'lan' and i.name is defined and i.advertise|default(true) %}
-    edit {{ loop.index }}
+    {% set l3 = loop %}
+    edit {{ l3.index }}
       set prefix {{ i.ip|ipaddr(0) }}
     next
     {% endfor %}

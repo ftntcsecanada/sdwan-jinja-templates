@@ -1,87 +1,87 @@
-{# 01-Edge-Underlay.j2                                                        #}
-{# Release: 7.2                                                               #}
-{# Design flavor: "BGP on Loopback"                                           #}
+{# 01-Edge-Underlay.j2 #}
+{# Release: 7.4 #}
+{# Design flavor: "BGP on Loopback" #}
 {# -------------------------------------------------------------------------- #}
-{# Disclaimer: Normally, this file is not supposed to be edited by users.     #}
+{# Disclaimer: Normally, this file is not supposed to be edited by users. #}
 {# -------------------------------------------------------------------------- #}
 
 {% import 'Project' as project with context %}
 
 {# General settings #}
 config system settings
-  set location-id {{ loopback|ipaddr('address') }}
+set location-id {{ loopback|ipaddr('address') }}
 end
 config system global
-  {% if not project.profiles[profile].ha|default(false) and hostname is defined %}
-  set hostname {{ hostname }}
-  {% endif %}
+{% if not project.profiles[profile].ha|default(false) and hostname is defined %}
+set hostname {{ hostname }}
+{% endif %}
 end
 
 {# Loop: Configure underlay interfaces #}
 {% for i in project.profiles[profile].interfaces if i.name is defined %}
 config system interface
-  edit "{{i.name}}"
-    {# IP #}
-    {% if i.ip is defined %}
-    {% if i.ip == 'dhcp' %}
-    set mode dhcp
-    {%  else %}
-    set mode static
-    set ip {{ i.ip }}
-    {% endif %}
-    {% endif %}
+edit "{{i.name}}"
+{# IP #}
+{% if i.ip is defined %}
+{% if i.ip == 'dhcp' %}
+set mode dhcp
+{% else %}
+set mode static
+set ip {{ i.ip }}
+{% endif %}
+{% endif %}
 
-    {# VLAN #}
-    {% if i.vlanid is defined and i.parent is defined %}
-    set vdom "root"
-    set type vlan
-    set vlanid {{ i.vlanid }}
-    set interface {{ i.parent }}
-    {% endif %}
+{# VLAN #}
+{% if i.vlanid is defined and i.parent is defined %}
+set vdom "root"
+set type vlan
+set vlanid {{ i.vlanid }}
+set interface {{ i.parent }}
+{% endif %}
 
-    {# FEX #}
-    {% if i.fex|default(false) %}
-    set type fext-wan
-    {% endif %}  
+{# FEX #}
+{% if i.fex|default(false) %}
+set type fext-wan
+{% endif %}
 
-    {# QoS: Add shaping profile and in/outbandwidth only if interface is of type wan and meta fields are both defined #}
-    {% if i.role == 'wan' and i.outbandwidth is defined %}
-    set estimated-upstream-bandwidth {{ i.outbandwidth }}
-      {% if i.shaping_profile is defined %}
-      set outbandwidth {{ i.outbandwidth }}
-      set egress-shaping-profile {{ i.shaping_profile }}
-      {% endif %}
-    {% endif %}
-    {% if i.role == 'wan' and i.inbandwidth is defined %}
-    set estimated-downstream-bandwidth {{ i.inbandwidth }}
-      {% if i.shaping_profile is defined %}
-      set inbandwidth {{ i.inbandwidth }}
-      set ingress-shaping-profile {{ i.shaping_profile }}
-      {% endif %}
-    {% endif %}
+{# QoS: Add shaping profile and in/outbandwidth only if interface is of type wan and meta fields are both defined #}
+{% if i.role == 'wan' and i.outbandwidth is defined %}
+set estimated-upstream-bandwidth {{ i.outbandwidth }}
+{% if i.shaping_profile is defined %}
+set outbandwidth {{ i.outbandwidth }}
+set egress-shaping-profile {{ i.shaping_profile }}
+{% endif %}
+{% endif %}
+{% if i.role == 'wan' and i.inbandwidth is defined %}
+set estimated-downstream-bandwidth {{ i.inbandwidth }}
+{% if i.shaping_profile is defined %}
+set inbandwidth {{ i.inbandwidth }}
+set ingress-shaping-profile {{ i.shaping_profile }}
+{% endif %}
+{% endif %}
 
-    {# Other settings #}
-    {% if i.role == 'wan' %}
-    set role wan
-    {% endif %}
-    {% if i.role == 'lan' %}
-    set role lan
-    set device-identification enable
-    {% endif %}
-    set allowaccess {{ 'ping' if not i.access|default(false) else i.access }}
-  next
+{# Other settings #}
+{% if i.role == 'wan' %}
+set role wan
+{% endif %}
+{% if i.role == 'lan' %}
+set role lan
+set device-identification enable
+{% endif %}
+set allowaccess {{ 'ping' if not i.access|default(false) else i.access }}
+next
 end
 
 {# Configure FEX parent interface #}
 {% if i.fex|default(false) %}
 config system interface
-  edit {{ i.parent }}
-    set mode dhcp
-    set allowaccess ping fabric
-    set monitor-bandwidth enable
-    set role wan
-    unset lldp-reception      
-  next
+edit {{ i.parent }}
+set mode dhcp
+set allowaccess ping fabric
+set monitor-bandwidth enable
+set role wan
+unset lldp-reception
+next
 end
 {% endif %}
 
@@ -90,61 +90,61 @@ end
 
 {# Main Loopback #}
 config system interface
-  edit "Lo"
-    set vdom "root"
-    set type loopback
-    set ip {{ loopback|ipaddr('address') }}/32
-    set allowaccess ping
-  next
+edit "Lo"
+set vdom "root"
+set type loopback
+set ip {{ loopback|ipaddr('address') }}/32
+set allowaccess ping
+next
 end
 
 {# Create LAN Zone #}
 {% set lan_intf = [] %}
 {% if project.create_lan_zone|default(true) %}
 config system zone
-  edit "{{ project.lan_zone|default('lan_zone') }}"
-    {% for i in project.profiles[profile].interfaces if i.role == 'lan' and i.name is defined %}
-    {{  lan_intf.append(i.name) or "" }}
-    {% endfor %}
-    set interface {{ lan_intf|join(' ') }}
-  next
+edit "{{ project.lan_zone|default('lan_zone') }}"
+{% for i in project.profiles[profile].interfaces if i.role == 'lan' and i.name is defined %}
+{{ lan_intf.append(i.name) or "" }}
+{% endfor %}
+set interface {{ lan_intf|join(' ') }}
+next
 end
 {% endif %}
 
 {# Support SD-Branch (Fortilink interface) #}
 {% set fortilink_intf = [] %}
 {% for i in project.profiles[profile].interfaces if i.role == 'sd_branch' and i.name is defined %}
-{{  fortilink_intf.append(i.name) or "" }}
+{{ fortilink_intf.append(i.name) or "" }}
 {% endfor %}
 {% if fortilink_intf %}
 config system global
-  set switch-controller enable
+set switch-controller enable
 end
 config system interface
-  edit "fortilink"
-    set member {{ fortilink_intf|join(' ') }}
-  next
+edit "fortilink"
+set member {{ fortilink_intf|join(' ') }}
+next
 end
 {% endif %}
 
 {# Enable DHCP Server on LAN interfaces #}
 {% if project.create_lan_dhcp_server|default(true) %}
 config system dhcp server
-  {% for i in project.profiles[profile].interfaces if i.role == 'lan' and i.name is defined %}
-  {% if i.dhcp_server|default(true) %}
-  edit {{ 10 + loop.index0 }}
-    set dns-service default
-    set default-gateway {{ i.ip|ipaddr('address') }}
-    set netmask {{ i.ip|ipaddr('netmask') }}
-    set interface {{ i.name }}
-    config ip-range
-      edit 1
-        set start-ip {{ i.ip|ipaddr(4)|ipaddr('address') }}
-        set end-ip {{ i.ip|ipaddr(-5)|ipaddr('address') }}
-      next
-    end
-  next
-  {% endif %}
-  {% endfor %}
+{% for i in project.profiles[profile].interfaces if i.role == 'lan' and i.name is defined %}
+{% if i.dhcp_server|default(true) %}
+edit {{ 10 + loop.index0 }}
+set dns-service default
+set default-gateway {{ i.ip|ipaddr('address') }}
+set netmask {{ i.ip|ipaddr('netmask') }}
+set interface {{ i.name }}
+config ip-range
+edit 1
+set start-ip {{ i.ip|ipaddr(4)|ipaddr('address') }}
+set end-ip {{ i.ip|ipaddr(-5)|ipaddr('address') }}
+next
+end
+next
+{% endif %}
+{% endfor %}
 end
 {% endif %}
