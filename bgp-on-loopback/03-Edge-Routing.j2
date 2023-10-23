@@ -50,6 +50,7 @@ config router bgp
     next
     {% endfor %}
   end
+  {% if project.dynamic_spokes_peering|default(false) %}
   config neighbor-group
     edit "EDGE"
       set soft-reconfiguration enable
@@ -68,6 +69,14 @@ config router bgp
       set neighbor-group "EDGE"
       next
     end
+  {% else %}
+  config neighbor-group
+    purge
+  end
+  config neighbor-range
+    purge
+  end
+  {% endif %}
   config network
     {% for i in project.profiles[profile].interfaces if i.role == 'lan' and i.name is defined and i.advertise|default(true) %}
     {% set l3 = loop %}
