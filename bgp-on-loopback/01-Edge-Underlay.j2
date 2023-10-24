@@ -10,6 +10,7 @@
 {# General settings #}
 config system settings
 set location-id {{ loopback|ipaddr('address') }}
+set gui-ztna disable
 end
 config system global
 {% if not project.profiles[profile].ha|default(false) and hostname is defined %}
