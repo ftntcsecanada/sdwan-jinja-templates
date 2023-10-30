@@ -60,6 +60,7 @@ config router bgp
       set remote-as {{ project.regions[region].as }}
       set interface "Lo"
       set update-source "Lo"
+      set route-map-in "H1_TAG"
       set route-map-out-preferable "SLA_OK"
     next
   end
