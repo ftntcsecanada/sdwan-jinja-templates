@@ -289,6 +289,7 @@ they are not configured explicitly):
 | intrareg_advpn         | true / false | Enable ADVPN within each region                                                               |       true        |
 | multireg_advpn         | true / false | Extend ADVPN across the regions                                                               |       false       |
 | hub_hc_server          |    \<ip\>    | Health server IP on the Hubs (set on Lo-HC interface on the Hubs, probed by Edges)            |   '10.200.99.1'   |
+| dynamic_spokes_peering          |    true / false    | Enable dynamic bgp neighborships betzzen spokes and disable route reflection            |   false   |
 
 
 #### Additional parameters for the Multi-VRF flavor
